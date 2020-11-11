@@ -60,6 +60,7 @@ const (
 	basicAuth authType = iota
 	oAuthToken
 	privateToken
+	cookieAuth
 )
 
 // A Client manages communication with the GitLab API.
@@ -200,6 +201,18 @@ func NewClient(token string, options ...ClientOptionFunc) (*Client, error) {
 	}
 	client.authType = privateToken
 	client.token = token
+	return client, nil
+}
+
+// NewClient returns a new GitLab API client. To use API methods which require
+// authentication, provide a valid private or personal token.
+func NewCookieClient(cookie string, options ...ClientOptionFunc) (*Client, error) {
+	client, err := newClient(options...)
+	if err != nil {
+		return nil, err
+	}
+	client.authType = cookieAuth
+	client.token = cookie
 	return client, nil
 }
 
@@ -626,6 +639,8 @@ func (c *Client) Do(req *retryablehttp.Request, v interface{}) (*Response, error
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	case privateToken:
 		req.Header.Set("PRIVATE-TOKEN", c.token)
+	case cookieAuth:
+		req.Header.Set("Cookie", "_gitlab_session="+c.token)
 	}
 
 	resp, err := c.client.Do(req)
